@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14213D">
+<title>Appel en classe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#14213D; --muted:#5A6577; --line:#D5DBE5;
+  --accent:#14213D; --on-accent:#FFFFFF;
+  --present:#1E8E5A; --late:#B9770E; --absent:#C0392B; --on-status:#FFFFFF;
+  --focus:#2F6FED; --overlay:rgba(10,15,25,.55);
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1522; --surface:#172033; --ink:#E8ECF4; --muted:#98A3B8; --line:#26324A;
+    --accent:#DCE4F5; --on-accent:#0F1522;
+    --present:#3DBB82; --late:#E0A030; --absent:#E5655A; --on-status:#0F1522;
+    --focus:#7FA6FF; --overlay:rgba(0,0,0,.6);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1522; --surface:#172033; --ink:#E8ECF4; --muted:#98A3B8; --line:#26324A;
+  --accent:#DCE4F5; --on-accent:#0F1522;
+  --present:#3DBB82; --late:#E0A030; --absent:#E5655A; --on-status:#0F1522;
+  --focus:#7FA6FF; --overlay:rgba(0,0,0,.6);
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.4 "Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+main{max-width:560px;margin:0 auto;padding:0 14px 120px}
+
+.head{padding:18px 2px 12px}
+.head-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+h1{margin:0;font-size:24px;line-height:1.15;font-weight:700;letter-spacing:-.01em}
+.date{margin:4px 0 0;color:var(--muted);font-size:15px}
+.net{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap;padding-top:5px}
+.net i{width:8px;height:8px;border-radius:50%;background:var(--present);display:inline-block}
+.net.wait i,.net.off i{background:var(--late)}
+.back{background:none;border:0;padding:8px 0;color:var(--muted);font-size:15px;cursor:pointer;min-height:40px}
+
+.tally{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:10px 0 12px;border-bottom:1px solid var(--line)}
+.strip{display:flex;gap:2px;margin-bottom:10px}
+.strip span{flex:1;height:10px;border-radius:3px;background:var(--line)}
+.strip span.present{background:var(--present)}
+.strip span.retard{background:var(--late)}
+.strip span.absent{background:var(--absent)}
+.counts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.count b{display:block;font-size:24px;line-height:1;font-weight:700;font-variant-numeric:tabular-nums}
+.count span{font-size:13px;color:var(--muted)}
+.count.present b{color:var(--present)}
+.count.retard b{color:var(--late)}
+.count.absent b{color:var(--absent)}
+
+.tools{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:14px 0 10px;flex-wrap:wrap}
+.tabs{display:flex;gap:6px}
+.tab{border:1.5px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:7px 12px;min-height:38px;font-size:14px;font-weight:500;cursor:pointer}
+.tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.legend{display:flex;gap:10px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.legend svg{width:16px;height:16px}
+
+.list{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;padding:10px 12px 10px 14px;border-bottom:1px solid var(--line);box-shadow:inset 4px 0 0 var(--stripe,transparent)}
+.row:last-child{border-bottom:0}
+.row[data-s="present"]{--stripe:var(--present)}
+.row[data-s="retard"]{--stripe:var(--late)}
+.row[data-s="absent"]{--stripe:var(--absent)}
+.name{font-weight:600;font-size:17px}
+.note{font-size:13px;color:var(--muted);margin-top:1px}
+.row[data-s="absent"] .note{color:var(--absent);font-weight:500}
+.acts{display:flex;gap:6px}
+.btn-s{width:46px;height:46px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);display:grid;place-items:center;cursor:pointer;transition:transform .08s ease}
+.btn-s:active{transform:scale(.93)}
+.btn-s svg{width:22px;height:22px}
+.btn-s:disabled{opacity:.55;cursor:default}
+.btn-s[aria-pressed="true"].present{background:var(--present);border-color:var(--present);color:var(--on-status)}
+.btn-s[aria-pressed="true"].retard{background:var(--late);border-color:var(--late);color:var(--on-status)}
+.btn-s[aria-pressed="true"].absent{background:var(--absent);border-color:var(--absent);color:var(--on-status)}
+.empty{padding:28px 16px;text-align:center;color:var(--muted)}
+
+.done{margin:14px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 14px 18px;box-shadow:inset 4px 0 0 var(--present)}
+.done strong{display:block;font-size:17px}
+.done p{margin:4px 0 10px;color:var(--muted);font-size:14px}
+
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--surface);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px))}
+.bar-in{max-width:560px;margin:0 auto;display:flex;gap:10px}
+.btn{flex:1;min-height:50px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);font-weight:600;font-size:16px;cursor:pointer;padding:0 14px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn:disabled{opacity:.45;cursor:default}
+.linkbtn{background:none;border:0;padding:8px 0;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:14px;min-height:40px}
+
+/* Connexion */
+.login{max-width:420px;margin:0 auto;padding:56px 18px 40px}
+.login h1{margin-bottom:6px}
+.login p.lead{margin:0 0 22px;color:var(--muted)}
+.field{display:block;margin-bottom:14px;font-size:15px;color:var(--muted)}
+.field input{display:block;width:100%;margin-top:6px;min-height:50px;padding:0 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font-size:17px}
+.err{margin:0 0 14px;padding:10px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--absent);color:var(--absent);font-size:14px}
+.info{margin:0 0 14px;padding:10px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-size:14px}
+.login .btn{width:100%;flex:none}
+
+/* Accueil */
+.dayrow{display:flex;gap:10px;align-items:center;margin:6px 0 14px;flex-wrap:wrap}
+.dayrow input[type="date"]{min-height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);font-weight:600}
+.dayrow .tab{min-height:44px}
+.items{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.item{width:100%;display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;text-align:left;padding:14px 14px;background:none;border:0;border-bottom:1px solid var(--line);cursor:pointer;min-height:64px;box-shadow:inset 4px 0 0 var(--stripe,transparent)}
+li:last-child > .item{border-bottom:0}
+.item[data-st="open"]{--stripe:var(--late)}
+.item[data-st="done"]{--stripe:var(--present)}
+.item .t{font-weight:600;font-size:17px}
+.item .s{font-size:14px;color:var(--muted);margin-top:2px}
+.badge{font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;border:1.5px solid var(--line);color:var(--muted);white-space:nowrap}
+.badge.open{border-color:var(--late);color:var(--late)}
+.badge.done{border-color:var(--present);color:var(--present)}
+
+.toast{position:fixed;left:14px;right:14px;z-index:20;bottom:calc(82px + env(safe-area-inset-bottom,0px));max-width:532px;margin:0 auto;background:var(--accent);color:var(--on-accent);border-radius:12px;padding:10px 12px 10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:15px}
+.toast button{background:none;border:0;color:inherit;font-weight:700;text-decoration:underline;padding:8px;min-height:40px;cursor:pointer}
+.toast[hidden]{display:none}
+
+.overlay{position:fixed;inset:0;z-index:30;background:var(--overlay);display:flex;align-items:flex-end;justify-content:center}
+.overlay[hidden]{display:none}
+.sheet{width:100%;max-width:560px;max-height:85vh;overflow:auto;background:var(--surface);border-radius:18px 18px 0 0;padding:20px 18px calc(18px + env(safe-area-inset-bottom,0px))}
+.sheet h2{margin:0 0 12px;font-size:20px}
+.sum{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
+.sheet h3{margin:14px 0 6px;font-size:15px}
+.sheet ul{margin:0;padding-left:18px}
+.sheet li{margin:2px 0}
+.warn{background:var(--bg);border-radius:10px;padding:10px 12px;color:var(--muted);font-size:14px;margin-top:12px}
+.sheet .btns{display:flex;gap:10px;margin-top:18px}
+
+@media (prefers-reduced-motion: reduce){ .btn-s{transition:none} }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div class="toast" id="toast" hidden role="status"><span id="toastTxt"></span><button type="button" id="toastBtn" hidden></button></div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"></div>
+</div>
+
+<!-- Bibliothèque Supabase (version 2). Pour figer une version précise, remplace @2 par ex. @2.45.4 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  'use strict';
+
+  /* =====================================================================
+     1. CONFIGURATION : à remplir avec les valeurs de ton projet Supabase
+        (Project Settings > API). Utilise la clé "anon / public",
+        JAMAIS la clé "service_role".
+     ===================================================================== */
+  var SUPABASE_URL = 'https://VOTRE-PROJET.supabase.co';
+  var SUPABASE_ANON_KEY = 'VOTRE-CLE-ANON-PUBLIQUE';
+
+  var CONFIG_OK = !/VOTRE/.test(SUPABASE_URL + SUPABASE_ANON_KEY);
+  var sb = null;
+  if (CONFIG_OK && window.supabase) {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
+  }
+
+  /* =====================================================================
+     2. OUTILS
+     ===================================================================== */
+  var $ = function(id){ return document.getElementById(id); };
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function pad(n){ return (n < 10 ? '0' : '') + n; }
+  function fmtTime(d){ return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  function todayISO(){ var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+  function weekdayISO(dateStr){ var g = new Date(dateStr + 'T00:00:00').getDay(); return g === 0 ? 7 : g; }
+  function debutDate(dateStr, heure){ return new Date(dateStr + 'T' + heure.slice(0,5) + ':00'); }
+  function fmtDay(dateStr){
+    var s = new Intl.DateTimeFormat('fr-FR', {weekday:'long', day:'numeric', month:'long'}).format(new Date(dateStr + 'T00:00:00'));
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  function sameDay(a, b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+  function isNetworkError(err){
+    return navigator.onLine === false || /fetch|network|load failed/i.test((err && err.message) || '');
+  }
+  function friendly(err){
+    var m = (err && err.message) || 'erreur inconnue';
+    if (/Invalid login credentials/i.test(m)) return 'E-mail ou mot de passe incorrect.';
+    if (/row-level security|permission denied/i.test(m)) return 'Action non autorisée pour ce compte.';
+    if (isNetworkError(err)) return 'Pas de connexion. Réessaie quand le réseau est revenu.';
+    return m;
+  }
+
+  var ICON = {
+    present:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    retard:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+    absent:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>'
+  };
+  var LABEL = {present:'Présent', retard:'En retard', absent:'Absent'};
+
+  /* =====================================================================
+     3. ÉTAT
+     ===================================================================== */
+  var session = null, profile = null;
+  var view = 'login';                       // config | login | home | appel
+  var loginError = '';
+  var home = { date: todayISO(), items: [], loading: false, error: '' };
+  var appel = null;                         // { seance, item, eleves, records, filter, locked }
+  var busy = false;
+  var toastTimer = null, toastAction = null;
+
+  /* =====================================================================
+     4. FILE D'ATTENTE DES POINTAGES (fonctionne aussi sans réseau)
+        Chaque pointage est d'abord gardé sur l'appareil, puis envoyé à Supabase.
+     ===================================================================== */
+  var QKEY = 'presence-queue-v1';
+  var queue = loadQueue();
+  var flushing = false;
+
+  function loadQueue(){ try { return JSON.parse(localStorage.getItem(QKEY)) || {}; } catch(e){ return {}; } }
+  function saveQueue(){ try { localStorage.setItem(QKEY, JSON.stringify(queue)); } catch(e){} }
+  function pendingCount(){ return Object.keys(queue).length; }
+
+  function enqueue(item){
+    queue[item.seance_id + '|' + item.eleve_id] = item;
+    saveQueue(); updateSync(); flush();
+  }
+
+  async function flush(){
+    if (!sb || flushing || !pendingCount() || !session) { updateSync(); return; }
+    if (navigator.onLine === false) { updateSync(); return; }
+    flushing = true;
+    var networkDown = false, refused = 0;
+    try {
+      var keys = Object.keys(queue);
+      var ups = keys.filter(function(k){ return queue[k].op === 'upsert'; });
+      var dels = keys.filter(function(k){ return queue[k].op === 'delete'; });
+
+      if (ups.length) {
+        var sent = ups.map(function(k){ return queue[k]; });
+        var res;
+        try { res = await sb.from('presences').upsert(sent.map(function(i){ return i.row; }), {onConflict:'seance_id,eleve_id'}); }
+        catch(e){ res = {error:{message:String(e)}}; }
+        if (!res.error) {
+          ups.forEach(function(k, n){ if (queue[k] === sent[n]) delete queue[k]; });
+        } else if (isNetworkError(res.error)) {
+          networkDown = true;
+        } else {
+          // une ligne est refusée : on isole en envoyant une par une
+          for (var u = 0; u < ups.length; u++) {
+            var it = queue[ups[u]]; if (!it) continue;
+            var r1;
+            try { r1 = await sb.from('presences').upsert(it.row, {onConflict:'seance_id,eleve_id'}); }
+            catch(e2){ r1 = {error:{message:String(e2)}}; }
+            if (!r1.error) { if (queue[ups[u]] === it) delete queue[ups[u]]; }
+            else if (isNetworkError(r1.error)) { networkDown = true; break; }
+            else { delete queue[ups[u]]; refused++; }
+          }
+        }
+        saveQueue();
+      }
+
+      for (var d = 0; d < dels.length && !networkDown; d++) {
+        var di = queue[dels[d]]; if (!di) continue;
+        var r2;
+        try { r2 = await sb.from('presences').delete().eq('seance_id', di.seance_id).eq('eleve_id', di.eleve_id); }
+        catch(e3){ r2 = {error:{message:String(e3)}}; }
+        if (!r2.error) { if (queue[dels[d]] === di) delete queue[dels[d]]; }
+        else if (isNetworkError(r2.error)) { networkDown = true; }
+        else { delete queue[dels[d]]; refused++; }
+      }
+      saveQueue();
+    } finally {
+      flushing = false;
+      updateSync();
+    }
+    if (refused) {
+      notify(refused + (refused > 1 ? ' pointages ont été refusés' : ' pointage a été refusé') + ' (appel déjà validé ?). Les données ont été rechargées.');
+      if (appel) await reloadRecords();
+    }
+    if (!networkDown && pendingCount()) setTimeout(flush, 300);
+  }
+
+  function updateSync(){
+    var el = $('sync'); if (!el) return;
+    var n = pendingCount(), off = navigator.onLine === false;
+    var cls = 'net', txt = 'Synchronisé';
+    if (off) { cls += ' off'; txt = n ? 'Hors ligne, ' + n + ' en attente' : 'Hors ligne'; }
+    else if (n) { cls += ' wait'; txt = n + ' en attente'; }
+    el.className = cls;
+    el.innerHTML = '<i></i><span>' + esc(txt) + '</span>';
+  }
+
+  /* =====================================================================
+     5. NOTIFICATIONS
+     ===================================================================== */
+  function notify(msg, actionLabel, action){
+    $('toastTxt').textContent = msg;
+    var b = $('toastBtn');
+    if (actionLabel) { b.textContent = actionLabel; b.hidden = false; toastAction = action; }
+    else { b.hidden = true; toastAction = null; }
+    $('toast').hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ $('toast').hidden = true; toastAction = null; }, actionLabel ? 6000 : 5000);
+  }
+
+  /* =====================================================================
+     6. CONNEXION / PROFIL
+     ===================================================================== */
+  async function signIn(email, password){
+    loginError = ''; busy = true; render();
+    var res = await sb.auth.signInWithPassword({ email: email, password: password });
+    busy = false;
+    if (res.error) { loginError = friendly(res.error); render(); return; }
+    session = res.data.session;
+    await loadProfile();
+    view = 'home'; home.date = todayISO();
+    loadHome();
+  }
+
+  async function loadProfile(){
+    var r = await sb.from('profiles').select('nom_complet, role').eq('id', session.user.id).maybeSingle();
+    profile = (r.data) || { nom_complet: session.user.email, role: 'prof' };
+  }
+
+  async function signOut(){
+    if (pendingCount()) { notify('Des pointages ne sont pas encore envoyés. Reviens en ligne avant de te déconnecter.'); return; }
+    await sb.auth.signOut();
+  }
+
+  /* =====================================================================
+     7. ACCUEIL : séances du jour choisi
+     ===================================================================== */
+  async function loadHome(){
+    home.loading = true; home.error = ''; render();
+    try {
+      var wd = weekdayISO(home.date);
+      var c = await sb.from('creneaux')
+        .select('id, groupe_id, jour_semaine, heure_debut, duree_minutes, groupes(nom, specialisation, actif)')
+        .eq('jour_semaine', wd).order('heure_debut');
+      if (c.error) throw c.error;
+      var items = (c.data || []).filter(function(i){ return i.groupes && i.groupes.actif !== false; });
+
+      if (items.length) {
+        var start = new Date(home.date + 'T00:00:00');
+        var end = new Date(start.getTime() + 36 * 3600 * 1000);
+        var s = await sb.from('seances').select('id, groupe_id, debut, validee_le, validee_par')
+          .in('groupe_id', items.map(function(i){ return i.groupe_id; }))
+          .gte('debut', start.toISOString()).lt('debut', end.toISOString());
+        if (s.error) throw s.error;
+        items.forEach(function(it){
+          var t = debutDate(home.date, it.heure_debut).getTime();
+          it.seance = (s.data || []).filter(function(x){ return x.groupe_id === it.groupe_id && new Date(x.debut).getTime() === t; })[0] || null;
+        });
+      }
+      home.items = items;
+    } catch(e) {
+      home.error = friendly(e); home.items = [];
+    }
+    home.loading = false;
+    if (view === 'home') render();
+  }
+
+  /* =====================================================================
+     8. APPEL
+     ===================================================================== */
+  async function openSeance(idx){
+    if (busy) return;
+    var item = home.items[idx]; if (!item) return;
+    busy = true;
+    try {
+      var debut = debutDate(home.date, item.heure_debut);
+      var seance = item.seance;
+      if (!seance) {
+        var ins = await sb.from('seances').insert({ groupe_id: item.groupe_id, debut: debut.toISOString(), mode: 'presentiel' }).select().single();
+        if (ins.error && ins.error.code === '23505') {
+          ins = await sb.from('seances').select('*').eq('groupe_id', item.groupe_id).eq('debut', debut.toISOString()).single();
+        }
+        if (ins.error) throw ins.error;
+        seance = ins.data;
+      }
+      var r = await sb.from('inscriptions').select('eleves(id, prenom, nom, actif)').eq('groupe_id', item.groupe_id);
+      if (r.error) throw r.error;
+      var eleves = (r.data || []).map(function(x){ return x.eleves; })
+        .filter(function(e){ return e && e.actif !== false; });
+      function key(e){ return (e.nom.charAt(0) === '(' ? '\uffff' : '') + e.nom; }
+      eleves.sort(function(a, b){ return key(a).localeCompare(key(b), 'fr') || a.prenom.localeCompare(b.prenom, 'fr'); });
+
+      appel = { seance: seance, item: item, eleves: eleves, records: {}, filter: 'all' };
+      await reloadRecords(true);
+      view = 'appel';
+      window.scrollTo(0, 0);
+    } catch(e) {
+      notify('Impossible d\'ouvrir la séance : ' + friendly(e));
+    }
+    busy = false;
+    render();
+  }
+
+  async function reloadRecords(silent){
+    if (!appel) return;
+    var p = await sb.from('presences').select('eleve_id, statut, arrivee, minutes_retard').eq('seance_id', appel.seance.id);
+    var recs = {};
+    if (!p.error) {
+      (p.data || []).forEach(function(x){ recs[x.eleve_id] = { statut: x.statut, arrivee: x.arrivee, minutes_retard: x.minutes_retard }; });
+    } else if (!silent) { notify('Rechargement impossible : ' + friendly(p.error)); }
+    // les pointages pas encore envoyés restent prioritaires
+    Object.keys(queue).forEach(function(k){
+      var q = queue[k]; if (q.seance_id !== appel.seance.id) return;
+      if (q.op === 'upsert') recs[q.eleve_id] = { statut: q.row.statut, arrivee: q.row.arrivee, minutes_retard: q.row.minutes_retard };
+      else delete recs[q.eleve_id];
+    });
+    appel.records = recs;
+    // le verrou est relu sur la séance
+    var s = await sb.from('seances').select('id, groupe_id, debut, validee_le, validee_par').eq('id', appel.seance.id).maybeSingle();
+    if (s.data) appel.seance = s.data;
+    if (view === 'appel') render();
+  }
+
+  function isLocked(){ return !!(appel && appel.seance.validee_le); }
+
+  function buildRow(eleveId, statut){
+    var now = new Date(), debut = new Date(appel.seance.debut);
+    var today = sameDay(now, debut);
+    return {
+      seance_id: appel.seance.id,
+      eleve_id: eleveId,
+      statut: statut,
+      arrivee: (statut !== 'absent' && today) ? now.toISOString() : null,
+      minutes_retard: (statut === 'retard' && today) ? Math.max(0, Math.floor((now - debut) / 60000)) : 0,
+      pointe_par: session.user.id
+    };
+  }
+
+  function setStatus(eleveId, statut){
+    if (isLocked()) return;
+    var cur = appel.records[eleveId];
+    if (cur && cur.statut === statut) {
+      delete appel.records[eleveId];
+      enqueue({ op: 'delete', seance_id: appel.seance.id, eleve_id: eleveId });
+    } else {
+      var row = buildRow(eleveId, statut);
+      appel.records[eleveId] = { statut: row.statut, arrivee: row.arrivee, minutes_retard: row.minutes_retard };
+      enqueue({ op: 'upsert', seance_id: appel.seance.id, eleve_id: eleveId, row: row });
+    }
+    render();
+  }
+
+  function markRest(statut, quiet){
+    if (isLocked()) return [];
+    var added = [];
+    appel.eleves.forEach(function(e){
+      if (!appel.records[e.id]) {
+        var row = buildRow(e.id, statut);
+        appel.records[e.id] = { statut: row.statut, arrivee: row.arrivee, minutes_retard: row.minutes_retard };
+        queue[appel.seance.id + '|' + e.id] = { op: 'upsert', seance_id: appel.seance.id, eleve_id: e.id, row: row };
+        added.push(e.id);
+      }
+    });
+    saveQueue(); updateSync(); flush(); render();
+    if (added.length && !quiet) {
+      notify(added.length + (added.length > 1 ? ' élèves marqués ' : ' élève marqué ') + (statut === 'present' ? 'présents' : 'absents'), 'Annuler', function(){
+        added.forEach(function(id){
+          delete appel.records[id];
+          queue[appel.seance.id + '|' + id] = { op: 'delete', seance_id: appel.seance.id, eleve_id: id };
+        });
+        saveQueue(); updateSync(); flush(); render();
+      });
+    }
+    return added;
+  }
+
+  function counts(){
+    var c = { present: 0, retard: 0, absent: 0, rest: 0 };
+    appel.eleves.forEach(function(e){ var r = appel.records[e.id]; if (r) c[r.statut]++; else c.rest++; });
+    return c;
+  }
+
+  function noteFor(r){
+    if (!r) return 'À pointer';
+    if (r.statut === 'absent') return 'Absent';
+    var t = r.arrivee ? 'Arrivé à ' + fmtTime(new Date(r.arrivee)) : (r.statut === 'retard' ? 'En retard' : 'Présent');
+    if (r.statut === 'retard' && r.arrivee) t += r.minutes_retard > 0 ? ', ' + r.minutes_retard + ' min de retard' : ', en retard';
+    return t;
+  }
+
+  async function validateSeance(){
+    var btn = $('sheetOk'); if (btn) { btn.disabled = true; btn.textContent = 'Validation…'; }
+    await flush();
+    if (pendingCount()) {
+      closeSheet();
+      notify('Des pointages ne sont pas encore envoyés. Reviens en ligne puis valide à nouveau.');
+      return;
+    }
+    var r = await sb.from('seances').update({ validee_le: new Date().toISOString(), validee_par: session.user.id })
+      .eq('id', appel.seance.id).select().single();
+    closeSheet();
+    if (r.error) { notify('Validation impossible : ' + friendly(r.error)); return; }
+    appel.seance = r.data; render(); window.scrollTo(0, 0);
+  }
+
+  async function reopenSeance(){
+    var r = await sb.from('seances').update({ validee_le: null, validee_par: null }).eq('id', appel.seance.id).select().single();
+    if (r.error) { notify('Réouverture impossible : ' + friendly(r.error)); return; }
+    appel.seance = r.data; render();
+  }
+
+  /* =====================================================================
+     9. AFFICHAGE
+     ===================================================================== */
+  function render(){
+    var root = $('app');
+    if (view === 'config') root.innerHTML = configHtml();
+    else if (view === 'login') root.innerHTML = loginHtml();
+    else if (view === 'home') root.innerHTML = homeHtml();
+    else if (view === 'appel') appelRender(root);
+    updateSync();
+  }
+
+  function configHtml(){
+    return '<div class="login"><h1>Configuration à faire</h1>' +
+      '<p class="info">' + (sb === null && CONFIG_OK ? 'La bibliothèque Supabase n\'a pas pu se charger. Vérifie la connexion internet.' :
+      'Ouvre le fichier <b>index.html</b> et remplace <b>SUPABASE_URL</b> et <b>SUPABASE_ANON_KEY</b> par les valeurs de ton projet (Project Settings, API).') + '</p></div>';
+  }
+
+  function loginHtml(){
+    return '<div class="login"><h1>Appel en classe</h1><p class="lead">Connecte-toi avec le compte créé par l\'administrateur.</p>' +
+      (loginError ? '<p class="err" role="alert">' + esc(loginError) + '</p>' : '') +
+      '<form id="loginForm" autocomplete="on">' +
+      '<label class="field">Adresse e-mail<input type="email" id="email" autocomplete="username" inputmode="email" required></label>' +
+      '<label class="field">Mot de passe<input type="password" id="password" autocomplete="current-password" required></label>' +
+      '<button class="btn primary" type="submit"' + (busy ? ' disabled' : '') + '>' + (busy ? 'Connexion…' : 'Se connecter') + '</button>' +
+      '</form></div>';
+  }
+
+  function homeHtml(){
+    var list;
+    if (home.loading) list = '<li class="empty">Chargement des séances…</li>';
+    else if (home.error) list = '<li class="empty">' + esc(home.error) + '</li>';
+    else if (!home.items.length) list = '<li class="empty">Aucune séance prévue ce jour-là pour tes groupes.</li>';
+    else list = home.items.map(function(it, i){
+      var d = debutDate(home.date, it.heure_debut), e = new Date(d.getTime() + it.duree_minutes * 60000);
+      var st = !it.seance ? 'todo' : (it.seance.validee_le ? 'done' : 'open');
+      var label = st === 'todo' ? 'À faire' : (st === 'open' ? 'En cours' : 'Validé');
+      return '<li><button type="button" class="item" data-act="open" data-i="' + i + '" data-st="' + st + '">' +
+        '<div><div class="t">' + esc(it.groupes.nom) + '</div><div class="s">' + fmtTime(d) + ' - ' + fmtTime(e) + '</div></div>' +
+        '<span class="badge ' + st + '">' + label + '</span></button></li>';
+    }).join('');
+
+    return '<main><header class="head"><div class="head-top"><div><h1>Mes séances</h1>' +
+      '<p class="date">' + esc(profile ? profile.nom_complet : '') + (profile && profile.role === 'admin' ? ' (admin)' : '') + '</p></div>' +
+      '<span class="net" id="sync"></span></div></header>' +
+      '<div class="dayrow"><input type="date" id="day" value="' + esc(home.date) + '" aria-label="Jour des séances">' +
+      '<button type="button" class="tab" data-act="today" aria-pressed="' + (home.date === todayISO()) + '">Aujourd\'hui</button></div>' +
+      '<p class="date" style="margin:0 0 10px">' + esc(fmtDay(home.date)) + '</p>' +
+      '<ul class="items">' + list + '</ul>' +
+      '<p style="margin-top:18px"><button type="button" class="linkbtn" data-act="logout">Se déconnecter</button></p></main>';
+  }
+
+  function appelRender(root){
+    var focusKey = null, a = document.activeElement;
+    if (a && a.classList && a.classList.contains('btn-s')) focusKey = a.getAttribute('data-id') + '|' + a.getAttribute('data-s');
+
+    var c = counts(), locked = isLocked(), it = appel.item;
+    var d = new Date(appel.seance.debut), e = new Date(d.getTime() + it.duree_minutes * 60000);
+    var f = appel.filter;
+
+    var strip = appel.eleves.map(function(x){ var r = appel.records[x.id]; return '<span class="' + (r ? r.statut : '') + '"></span>'; }).join('');
+    var tabs = [['all', 'Tous ' + appel.eleves.length], ['todo', 'À pointer ' + c.rest], ['absent', 'Absents ' + c.absent]]
+      .map(function(t){ return '<button type="button" class="tab" data-act="filter" data-f="' + t[0] + '" aria-pressed="' + (f === t[0]) + '">' + t[1] + '</button>'; }).join('');
+
+    var visible = appel.eleves.filter(function(x){
+      var r = appel.records[x.id];
+      if (f === 'todo') return !r;
+      if (f === 'absent') return r && r.statut === 'absent';
+      return true;
+    });
+    var rows;
+    if (!appel.eleves.length) rows = '<li class="empty">Aucun élève inscrit dans ce groupe.</li>';
+    else if (!visible.length) rows = '<li class="empty">' + (f === 'todo' ? 'Tout le monde est pointé.' : 'Aucun absent pour l\'instant.') + '</li>';
+    else rows = visible.map(function(x){
+      var r = appel.records[x.id], nm = x.prenom + ' ' + x.nom;
+      function btn(k){
+        return '<button type="button" class="btn-s ' + k + '" data-act="status" data-id="' + x.id + '" data-s="' + k + '" aria-pressed="' + (!!r && r.statut === k) +
+          '" aria-label="' + LABEL[k] + ', ' + esc(nm) + '"' + (locked ? ' disabled' : '') + '>' + ICON[k] + '</button>';
+      }
+      return '<li class="row" data-s="' + (r ? r.statut : 'none') + '"><div><div class="name">' + esc(nm) + '</div><div class="note">' + esc(noteFor(r)) + '</div></div>' +
+        '<div class="acts" role="group" aria-label="Statut de ' + esc(nm) + '">' + btn('present') + btn('retard') + btn('absent') + '</div></li>';
+    }).join('');
+
+    var done = '';
+    if (locked) {
+      done = '<div class="done"><strong>Appel validé à ' + fmtTime(new Date(appel.seance.validee_le)) + '</strong><p>' + c.present + ' présents, ' + c.retard + ' en retard, ' + c.absent + ' absents.</p>' +
+        (profile && profile.role === 'admin' ? '<button type="button" class="btn" data-act="reopen">Rouvrir l\'appel</button>' : '<p style="margin:0">Pour corriger, demande à l\'administrateur de rouvrir l\'appel.</p>') + '</div>';
+    }
+
+    root.innerHTML = '<main><header class="head"><button type="button" class="back" data-act="back">‹ Mes séances</button>' +
+      '<div class="head-top"><div><h1>' + esc(it.groupes.nom) + '</h1><p class="date">' + esc(fmtDay(home.date)) + ', ' + fmtTime(d) + ' - ' + fmtTime(e) + '</p></div>' +
+      '<span class="net" id="sync"></span></div></header>' +
+      '<section class="tally" aria-label="Récapitulatif de l\'appel"><div class="strip" aria-hidden="true">' + strip + '</div>' +
+      '<div class="counts" aria-live="polite">' +
+      '<div class="count present"><b>' + c.present + '</b><span>Présents</span></div>' +
+      '<div class="count retard"><b>' + c.retard + '</b><span>Retards</span></div>' +
+      '<div class="count absent"><b>' + c.absent + '</b><span>Absents</span></div>' +
+      '<div class="count"><b>' + c.rest + '</b><span>À pointer</span></div></div></section>' + done +
+      '<div class="tools"><div class="tabs">' + tabs + '</div><div class="legend" aria-hidden="true">' +
+      '<span>' + ICON.present.replace('<svg', '<svg width="16" height="16"') + 'Présent</span>' +
+      '<span>' + ICON.retard.replace('<svg', '<svg width="16" height="16"') + 'Retard</span>' +
+      '<span>' + ICON.absent.replace('<svg', '<svg width="16" height="16"') + 'Absent</span></div></div>' +
+      '<ul class="list">' + rows + '</ul></main>' +
+      (locked ? '' : '<div class="bar"><div class="bar-in"><button class="btn" type="button" data-act="rest"' + (c.rest === 0 ? ' disabled' : '') + '>Tous les restants présents</button>' +
+      '<button class="btn primary" type="button" data-act="validate">Valider l\'appel</button></div></div>');
+
+    if (focusKey) {
+      var p = focusKey.split('|');
+      var el = document.querySelector('.btn-s[data-id="' + p[0] + '"][data-s="' + p[1] + '"]');
+      if (el) { try { el.focus({ preventScroll: true }); } catch(err) { el.focus(); } }
+    }
+  }
+
+  /* Récapitulatif avant validation */
+  function openSheet(){
+    var c = counts(), late = [], absent = [];
+    appel.eleves.forEach(function(x){
+      var r = appel.records[x.id];
+      if (r && r.statut === 'retard') late.push(x.prenom + ' ' + x.nom + (r.minutes_retard > 0 ? ' (' + r.minutes_retard + ' min)' : ''));
+      if (r && r.statut === 'absent') absent.push(x.prenom + ' ' + x.nom);
+    });
+    var html = '<h2 id="sheetTitle">Valider l\'appel ?</h2><div class="sum">' +
+      '<div class="count present"><b>' + c.present + '</b><span>Présents</span></div>' +
+      '<div class="count retard"><b>' + c.retard + '</b><span>Retards</span></div>' +
+      '<div class="count absent"><b>' + c.absent + '</b><span>Absents</span></div>' +
+      '<div class="count"><b>' + c.rest + '</b><span>À pointer</span></div></div>';
+    if (absent.length) html += '<h3>Absents</h3><ul>' + absent.map(function(n){ return '<li>' + esc(n) + '</li>'; }).join('') + '</ul>';
+    if (late.length) html += '<h3>Retards</h3><ul>' + late.map(function(n){ return '<li>' + esc(n) + '</li>'; }).join('') + '</ul>';
+    if (c.rest > 0) {
+      html += '<p class="warn">Il reste ' + c.rest + (c.rest > 1 ? ' élèves' : ' élève') + ' à pointer avant de valider.</p>' +
+        '<div class="btns"><button type="button" class="btn" data-act="sheetBack">Continuer l\'appel</button>' +
+        '<button type="button" class="btn primary" data-act="sheetAbsent">Marquer absents les restants</button></div>';
+    } else {
+      html += '<div class="btns"><button type="button" class="btn" data-act="sheetBack">Modifier</button>' +
+        '<button type="button" class="btn primary" id="sheetOk" data-act="sheetOk">Confirmer l\'appel</button></div>';
+    }
+    $('sheet').innerHTML = html;
+    $('overlay').hidden = false;
+    var first = $('sheet').querySelector('[data-act="sheetBack"]'); if (first) first.focus();
+  }
+  function closeSheet(){ $('overlay').hidden = true; }
+
+  /* =====================================================================
+     10. ÉVÈNEMENTS
+     ===================================================================== */
+  document.addEventListener('click', function(e){
+    var t = e.target.closest('[data-act]'); if (!t || t.disabled) return;
+    var act = t.getAttribute('data-act');
+    switch (act) {
+      case 'logout': signOut(); break;
+      case 'today': home.date = todayISO(); loadHome(); break;
+      case 'open': openSeance(+t.getAttribute('data-i')); break;
+      case 'back': appel = null; view = 'home'; loadHome(); break;
+      case 'filter': appel.filter = t.getAttribute('data-f'); render(); break;
+      case 'status': setStatus(t.getAttribute('data-id'), t.getAttribute('data-s')); break;
+      case 'rest': markRest('present'); break;
+      case 'validate': openSheet(); break;
+      case 'reopen': reopenSeance(); break;
+      case 'sheetBack': closeSheet(); break;
+      case 'sheetAbsent': closeSheet(); markRest('absent'); break;
+      case 'sheetOk': validateSeance(); break;
+    }
+  });
+  $('overlay').addEventListener('click', function(e){ if (e.target === $('overlay')) closeSheet(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !$('overlay').hidden) closeSheet(); });
+  $('toastBtn').addEventListener('click', function(){
+    var fn = toastAction; $('toast').hidden = true; toastAction = null; if (fn) fn();
+  });
+  document.addEventListener('submit', function(e){
+    if (e.target.id === 'loginForm') {
+      e.preventDefault();
+      signIn($('email').value.trim(), $('password').value);
+    }
+  });
+  document.addEventListener('change', function(e){
+    if (e.target.id === 'day' && e.target.value) { home.date = e.target.value; loadHome(); }
+  });
+  window.addEventListener('online', function(){ updateSync(); flush(); });
+  window.addEventListener('offline', updateSync);
+  setInterval(flush, 10000);
+
+  /* =====================================================================
+     11. DÉMARRAGE
+     ===================================================================== */
+  async function init(){
+    if (!sb) { view = 'config'; render(); return; }
+    var s = await sb.auth.getSession();
+    session = s.data.session;
+    sb.auth.onAuthStateChange(function(evt, sess){
+      session = sess;
+      if (evt === 'SIGNED_OUT') { profile = null; appel = null; view = 'login'; loginError = ''; render(); }
+    });
+    if (session) { await loadProfile(); view = 'home'; loadHome(); }
+    else { view = 'login'; render(); }
+  }
+  init();
+})();
+</script>
+</body>
+</html>
